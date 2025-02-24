@@ -113,15 +113,27 @@ def imprimirResultados(modelo):
 
     # verifico el estado de la solución
     estado = LpStatus[modelo.status]
+    print(f"Estado de la solución: {estado}")
+
     if estado == "Optimal":
-        print("Solución encontrada:")
+        print("\n** Solución encontrada **")
         for var in modelo.variables():
-            print(f"{var.name}: {var.varValue}")
+            print(f"{var.name} = {var.varValue}")
 
         print("\n** Función Objetivo **")
-        print(f"Valor mínimo de empleados necesarios: {modelo.objective.value()}")
+        print("Minimizar:")
+        print(f"  Z = {' + '.join([f'{coef}*{var.name}' for var, coef in zip(modelo.variables(), [1]*len(modelo.variables()))])}")
+
+        print("\n** Restricciones **")
+        for nombre, restriccion in modelo.constraints.items():
+            print(f"  {nombre}: {restriccion}")
+
+        print("\n** Valor óptimo de la función objetivo **")
+        print(f"  Z* = {modelo.objective.value()}")
+
     else:
-        print("No se encontró solución factible.")
+        print("No se encontró una solución factible.")
+
 
 
 if __name__ == "__main__":
