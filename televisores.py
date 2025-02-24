@@ -94,15 +94,13 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
         msg=True,
         keepFiles=False,
         options=[
-            "--simplex",
-            "--noscale",
-            "--primal",
-            "--std",
-            "--norelax",
-            "--nopresol",
-            "--nomip",
-            "--first",
-            "--nointopt",
+            "--simplex",    # método Simplex
+            "--noscale",    # no usar escalamiento de coeficientes
+            "--primal",     # resuelvo con Simplex Primal
+            "--std",        # usar regla standard para pivotes
+            "--nopresol",   # no hacer preprocesamiento
+            "--nomip",      # no usar Branch & Bound
+            "--nointopt",   # no hacer optmizaciones internas
         ],
     )
 
