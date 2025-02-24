@@ -1,5 +1,12 @@
 import sys
-from pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpStatus, PULP_CBC_CMD
+from pulp import (
+    LpProblem,
+    LpMinimize,
+    LpVariable,
+    lpSum,
+    LpStatus,
+    GLPK_CMD,
+)
 
 HORAS_TRABAJO = 8
 
@@ -83,14 +90,20 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
     # guardo el problema en un archivo .lp para dejar la información del problema
     modelo.writeLP("Minimizacion_Empleados.lp")
 
-    # configuro solver para usar Simplex con mensajes detallados
-    solver = PULP_CBC_CMD(
-        msg=True,            # muestro detalles del proceso
-        timeLimit=None,      # sin límite de tiempo
-        presolve=False,      # no usa preprocesamiento automático
-        cuts=None,           # no aplica cortes
-        strong=False,        # no usa heurísticas avanzadas
-        options=["ratio 1"]  # fuerzo la regla del mínimo cociente en Simplex
+    solver = GLPK_CMD(
+        msg=True,
+        keepFiles=False,
+        options=[
+            "--simplex",
+            "--noscale",
+            "--primal",
+            "--std",
+            "--norelax",
+            "--nopresol",
+            "--nomip",
+            "--first",
+            "--nointopt",
+        ],
     )
 
     # resuelvo el problema usando el método Simplex
@@ -132,7 +145,9 @@ def imprimirResultados(modelo):
 
         print("\n** Función Objetivo **")
         print("Minimizar:")
-        print(f"  Z = {' + '.join([f'{coef}*{var.name}' for var, coef in zip(modelo.variables(), [1]*len(modelo.variables()))])}")
+        print(
+            f"  Z = {' + '.join([f'{coef}*{var.name}' for var, coef in zip(modelo.variables(), [1]*len(modelo.variables()))])}"
+        )
 
         print("\n** Restricciones **")
         for nombre, restriccion in modelo.constraints.items():
@@ -143,7 +158,6 @@ def imprimirResultados(modelo):
 
     else:
         print("No se encontró una solución factible.")
-
 
 
 if __name__ == "__main__":
