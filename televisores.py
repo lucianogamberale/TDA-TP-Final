@@ -1,4 +1,5 @@
 import sys
+from pulp import LpProblem, LpMinimize, LpVariable, lpSum
 
 HORAS_TRABAJO = 8
 
@@ -11,10 +12,11 @@ def main():
     horariosEntrada = leerHorariosEntrada(archivoHorariosEntrada)
     franjasHorarias = leerFranjasHorarias(archivoFranjasHorarias)
 
-    variablesDecision = generarVariablesDecision(horariosEntrada)
-    restricciones = generarRestricciones(horariosEntrada, franjasHorarias)
+    # Generar y resolver el problema con Simplex usando PuLP
+    modelo = resolverSimplex(horariosEntrada, franjasHorarias)
 
-    imprimirProblemaProgramacionLineal(variablesDecision, restricciones)
+    # Imprimir resultados
+    imprimirResultados(modelo)
 
 # ======================= LECTURA ARCHIVOS =======================
 
@@ -42,33 +44,33 @@ def leerHorariosEntrada(nombreArchivo):
                 horarios.append(int(linea))  # Convierte a entero
     return horarios
 
-# ======================= VARIABLES DE DECISIÓN =======================
+# ======================= FORMULACIÓN Y RESOLUCIÓN CON SIMPLEX =======================
 
-def generarVariablesDecision(horariosEntrada):
-    variablesDecision = {}
-    
-    for i, to_i in enumerate(horariosEntrada):
-        variablesDecision[f"x_{i+1}"] = to_i
+def resolverSimplex(horariosEntrada, franjasHorarias):
+    # Definir el problema de minimización
+    modelo = LpProblem("Minimizacion_Empleados", LpMinimize)
 
-    return variablesDecision
+    # Definir variables de decisión (cantidad de empleados por horario de entrada)
+    variablesDecision = {
+        f"x_{i+1}": LpVariable(f"x_{i+1}", lowBound=0, cat="Integer")  # Variables enteras no negativas
+        for i in range(len(horariosEntrada))
+    }
 
-# ======================= RESTRICCIONES =======================
+    # Definir la función objetivo: Minimizar la cantidad total de empleados
+    modelo += lpSum(variablesDecision.values()), "Funcion_Objetivo"
 
-def generarRestricciones(horariosEntrada, franjasHorarias):
-    restricciones = {}
-
+    # Definir restricciones (cada franja debe ser cubierta)
     for j, (to_j, tf_j, bj) in enumerate(franjasHorarias):
-        restriccion = []
-        for i, to_i in enumerate(horariosEntrada):
-            if empleadoCubreFranjaHoraria(to_i, to_j, tf_j):
-                restriccion.append(f"x_{i+1}")
-        
-        restricciones[f"r_{j+1}"] = {
-            "b_j": bj,
-            "x_i": restriccion
-        }
-    
-    return restricciones
+        modelo += (
+            lpSum(variablesDecision[f"x_{i+1}"] for i, to_i in enumerate(horariosEntrada) if empleadoCubreFranjaHoraria(to_i, to_j, tf_j))
+            >= bj, 
+            f"Restriccion_{j+1}"
+        )
+
+    # Resolver el problema usando el método Simplex
+    modelo.solve()
+
+    return modelo
 
 def empleadoCubreFranjaHoraria(to_i, to_j, tf_j):
     tf_i = to_i + HORAS_TRABAJO  # Hora de salida del empleado
@@ -80,28 +82,27 @@ def empleadoCubreFranjaHoraria(to_i, to_j, tf_j):
         # El empleado cruza medianoche, divide su trabajo en dos partes
         to1_i = to_i
         tf1_i = 24
-
         to2_i = 0
         tf2_i = tf_i % 24
 
         return (to1_i <= to_j and tf1_i >= tf_j) or (to2_i <= to_j and tf2_i >= tf_j)
 
-# ======================= IMPRESIÓN DEL PROBLEMA =======================
+# ======================= IMPRESIÓN DE RESULTADOS =======================
 
-def imprimirProblemaProgramacionLineal(variablesDecision, restricciones):
-    print("\n** Variables de decisión **")
-    for x_i, to_i in variablesDecision.items():
-        print(f"{x_i}: cantidad de empleados que entran a las {to_i:02}:00")
+def imprimirResultados(modelo):
+    print("\n** Resultado del problema **")
 
-    print("\n** Restricciones **")
-    for r_j, restriccion in restricciones.items():
-        bj = restriccion["b_j"]
-        x_i = restriccion["x_i"]
-        restriccion_str = " + ".join(x_i) if x_i else "0"
-        print(f"{restriccion_str} >= {bj}  # {r_j}")
+    # Verificar el estado de la solución
+    estado = modelo.status
+    if estado == 1:
+        print("Solución encontrada:")
+        for var in modelo.variables():
+            print(f"{var.name}: {var.varValue}")
 
-    print("\n** Función Objetivo **")
-    print("Minimizar Z =", " + ".join(variablesDecision.keys()))
+        print("\n** Función Objetivo **")
+        print(f"Valor mínimo de empleados necesarios: {modelo.objective.value()}")
+    else:
+        print("No se encontró solución factible.")
 
 if __name__ == "__main__":
     main()
