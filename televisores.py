@@ -48,6 +48,8 @@ def leerHorariosEntrada(nombreArchivo):
             linea = linea.strip()
             if linea:
                 horarios.append(int(linea))
+    return horarios
+
 
 # ======================= FORMULACIÓN Y RESOLUCIÓN CON SIMPLEX =======================
 
@@ -60,7 +62,9 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
     variablesDecision = {}
     for i in range(len(horariosEntrada)):
         nombre_variable = f"x_{i+1}"
-        variablesDecision[nombre_variable] = LpVariable(nombre_variable, lowBound=0, cat="Integer")  # Variables enteras no negativas
+        variablesDecision[nombre_variable] = LpVariable(
+            nombre_variable, lowBound=0, cat="Integer"
+        )  # Variables enteras no negativas
 
     # defino la Función Objetivo: Minimizar la cantidad total de empleados
     modelo += lpSum(variablesDecision.values()), "Funcion_Objetivo"
@@ -73,7 +77,7 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
             to_i = horariosEntrada[i]
             if empleadoCubreFranjaHoraria(to_i, to_j, tf_j):
                 empleados_cubren_franja.append(variablesDecision[f"x_{i+1}"])
-        
+
         modelo += lpSum(empleados_cubren_franja) >= bj, f"Restriccion_{j+1}"
 
     # resuelvo el problema usando el método Simplex
