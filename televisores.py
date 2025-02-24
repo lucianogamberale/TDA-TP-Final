@@ -13,10 +13,10 @@ def main():
     horariosEntrada = leerHorariosEntrada(archivoHorariosEntrada)
     franjasHorarias = leerFranjasHorarias(archivoFranjasHorarias)
 
-    # Generar y resolver el problema con Simplex usando PuLP
+    # genero y resuelvo el problema con Simplex usando PuLP
     modelo = resolverSimplex(horariosEntrada, franjasHorarias)
 
-    # Imprimir resultados
+    # imprimo resultados
     imprimirResultados(modelo)
 
 
@@ -37,7 +37,7 @@ def leerFranjasHorarias(nombreArchivo):
             if linea:
                 partes = list(
                     map(int, linea.split(";"))
-                )  # Divide y convierte a enteros
+                )  # divido y convierto a enteros
                 franjas.append(partes)
     return franjas
 
@@ -48,7 +48,7 @@ def leerHorariosEntrada(nombreArchivo):
         for linea in archivo:
             linea = linea.strip()
             if linea:
-                horarios.append(int(linea))  # Convierte a entero
+                horarios.append(int(linea))  # convierto a entero
     return horarios
 
 
@@ -56,10 +56,10 @@ def leerHorariosEntrada(nombreArchivo):
 
 
 def resolverSimplex(horariosEntrada, franjasHorarias):
-    # Definir el problema de minimización
+    # defino el Problema de Minimización
     modelo = LpProblem("Minimizacion_Empleados", LpMinimize)
 
-    # Definir variables de decisión (cantidad de empleados por horario de entrada)
+    # defino Variables de Decisión (cantidad de empleados por horario de entrada)
     variablesDecision = {
         f"x_{i+1}": LpVariable(
             f"x_{i+1}", lowBound=0, cat="Integer"
@@ -67,10 +67,10 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
         for i in range(len(horariosEntrada))
     }
 
-    # Definir la función objetivo: Minimizar la cantidad total de empleados
+    # defino la Función Objetivo: Minimizar la cantidad total de empleados
     modelo += lpSum(variablesDecision.values()), "Funcion_Objetivo"
 
-    # Definir restricciones (cada franja debe ser cubierta)
+    # defino Restricciones (cada franja debe ser cubierta)
     for j, (to_j, tf_j, bj) in enumerate(franjasHorarias):
         modelo += (
             lpSum(
@@ -82,7 +82,7 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
             f"Restriccion_{j+1}",
         )
 
-    # Resolver el problema usando el método Simplex
+    # resuelvo el problema usando el método Simplex
     modelo.solve()
 
     return modelo
@@ -92,10 +92,10 @@ def empleadoCubreFranjaHoraria(to_i, to_j, tf_j):
     tf_i = to_i + HORAS_TRABAJO  # Hora de salida del empleado
 
     if tf_i < 24:
-        # El empleado no cruza medianoche, trabaja en un solo día
+        # el empleado no cruza medianoche, trabaja en un solo día
         return to_i <= to_j and tf_i >= tf_j
     else:
-        # El empleado cruza medianoche, divide su trabajo en dos partes
+        # el empleado cruza medianoche, divide su trabajo en dos partes
         to1_i = to_i
         tf1_i = 24
         to2_i = 0
@@ -110,7 +110,7 @@ def empleadoCubreFranjaHoraria(to_i, to_j, tf_j):
 def imprimirResultados(modelo):
     print("\n** Resultado del problema **")
 
-    # Verificar el estado de la solución
+    # verifico el estado de la solución
     estado = modelo.status
     if estado == 1:
         print("Solución encontrada:")
