@@ -1,5 +1,5 @@
 import sys
-from pulp import LpProblem, LpMinimize, LpVariable, lpSum
+from pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpStatus
 
 HORAS_TRABAJO = 8
 
@@ -35,9 +35,8 @@ def leerFranjasHorarias(nombreArchivo):
         for linea in archivo:
             linea = linea.strip()
             if linea:
-                partes = list(
-                    map(int, linea.split(";"))
-                )  # divido y convierto a enteros
+                partes = linea.split(";")
+                partes = [int(valor) for valor in partes]
                 franjas.append(partes)
     return franjas
 
@@ -48,9 +47,7 @@ def leerHorariosEntrada(nombreArchivo):
         for linea in archivo:
             linea = linea.strip()
             if linea:
-                horarios.append(int(linea))  # convierto a entero
-    return horarios
-
+                horarios.append(int(linea))
 
 # ======================= FORMULACIÓN Y RESOLUCIÓN CON SIMPLEX =======================
 
@@ -60,27 +57,24 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
     modelo = LpProblem("Minimizacion_Empleados", LpMinimize)
 
     # defino Variables de Decisión (cantidad de empleados por horario de entrada)
-    variablesDecision = {
-        f"x_{i+1}": LpVariable(
-            f"x_{i+1}", lowBound=0, cat="Integer"
-        )  # Variables enteras no negativas
-        for i in range(len(horariosEntrada))
-    }
+    variablesDecision = {}
+    for i in range(len(horariosEntrada)):
+        nombre_variable = f"x_{i+1}"
+        variablesDecision[nombre_variable] = LpVariable(nombre_variable, lowBound=0, cat="Integer")  # Variables enteras no negativas
 
     # defino la Función Objetivo: Minimizar la cantidad total de empleados
     modelo += lpSum(variablesDecision.values()), "Funcion_Objetivo"
 
     # defino Restricciones (cada franja debe ser cubierta)
-    for j, (to_j, tf_j, bj) in enumerate(franjasHorarias):
-        modelo += (
-            lpSum(
-                variablesDecision[f"x_{i+1}"]
-                for i, to_i in enumerate(horariosEntrada)
-                if empleadoCubreFranjaHoraria(to_i, to_j, tf_j)
-            )
-            >= bj,
-            f"Restriccion_{j+1}",
-        )
+    for j in range(len(franjasHorarias)):
+        to_j, tf_j, bj = franjasHorarias[j]
+        empleados_cubren_franja = []
+        for i in range(len(horariosEntrada)):
+            to_i = horariosEntrada[i]
+            if empleadoCubreFranjaHoraria(to_i, to_j, tf_j):
+                empleados_cubren_franja.append(variablesDecision[f"x_{i+1}"])
+        
+        modelo += lpSum(empleados_cubren_franja) >= bj, f"Restriccion_{j+1}"
 
     # resuelvo el problema usando el método Simplex
     modelo.solve()
@@ -111,8 +105,8 @@ def imprimirResultados(modelo):
     print("\n** Resultado del problema **")
 
     # verifico el estado de la solución
-    estado = modelo.status
-    if estado == 1:
+    estado = LpStatus[modelo.status]
+    if estado == "Optimal":
         print("Solución encontrada:")
         for var in modelo.variables():
             print(f"{var.name}: {var.varValue}")
