@@ -1,4 +1,5 @@
 import sys
+import math
 from pulp import (
     LpProblem,
     LpMinimize,
@@ -32,7 +33,9 @@ def main():
 
 def assertParametrosEsperados():
     if len(sys.argv) < 3:
-        print("Uso: python fabrica_televisores.py <horarios_entrada.csv> <franjas_horarias.csv>")
+        print(
+            "Uso: python fabrica_televisores.py <horarios_entrada.csv> <franjas_horarias.csv>"
+        )
         sys.exit(1)
 
 
@@ -91,7 +94,7 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
     modelo.writeLP("Minimizacion_Empleados.lp")
 
     solver = GLPK_CMD(
-        msg=True,
+        msg=False,
         keepFiles=False,
         options=[
             "--simplex",    # método Simplex
@@ -139,7 +142,7 @@ def imprimirResultados(modelo):
     if estado == "Optimal":
         print("\n** Solución encontrada **")
         for var in modelo.variables():
-            print(f"{var.name} = {var.varValue}")
+            print(f"{var.name} = {math.ceil(var.varValue)}")
 
         print("\n** Función Objetivo **")
         print("Minimizar:")
