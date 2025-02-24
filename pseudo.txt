@@ -1,0 +1,154 @@
+fn main():
+    horariosEntrada = leo el archivo horarios_entrada.csv y las guardo en una lista
+    franjasHorarias = leo el archivo franjas_horarias.csv y las guardo en una lista
+    HORAS_TRABAJO = 8 # para nuestro problema son 8hs pero podría ser variable
+
+    variablesDecision = generarVariablesDecision(horariosEntrada)
+
+    (estado, restricciones) = generarRestricciones(horariosEntrada, franjasHorarias)
+    si estado == 'absurdo':
+        retornar 'no se puede resolver el problema por falta de empleados en franjas horarias'
+    
+    funcionObj = funcionObjetivo(variablesDecision)
+
+    # presento el problema en forma estándar
+    (valorVariablesDecision, valorFuncionObjetivo) = algoritmoSimplex(variablesDecision, restricciones, funcionObj)
+
+    retornar transformoSolucion(valorVariablesDecision, valorFuncionObjetivo, horariosEntrada)
+
+//============== VARIABLES DE DECISIÓN ==============//
+
+fn generarVariablesDecision(horariosEntrada):
+    variablesDecision = []
+    
+    desde i = 1 hasta tamaño(horariosEntrada):
+        # genero las variables de decisión para cada horario de entrada
+        # la var x_i corresponde a horario de entrada to_i
+        agrego x_i a variablesDecision
+    
+    retornar variablesDecision
+
+//============== RESTRICCIONES ==============//
+
+fn generarRestricciones(horariosEntrada, franjasHorarias):
+    restricciones = []
+
+    para cada (to_j, tf_j, bj) en franjasHorarias:
+        primerTermino = 0
+        segundoTermino = -bj
+        
+        desde i = 1 hasta tamaño(horariosEntrada):
+            to_i = horariosEntrada[i]
+            si empleadoCubreFranjaHoraria(to_i, to_j, tf_j):
+                primerTermino -= x_i # esto es para dejarlo en su forma estandar
+        
+        si primerTermino == 0:
+            si segundoTermino != 0:
+                # es un absurdo dado que no hay empleados que puedan cubrir la franja y hay un mínimo mayor a cero
+                retornar ('absurdo', null)
+            sino:
+                # agregar esta condición es innecesario, por lo tanto continuo
+                continuar
+
+        agrego a restricciones (primerTermino, "<=", segundoTermino)
+    
+    # agrego restricciones de no negatividad
+    desde i = 1 hasta tamaño(horariosEntrada):
+        agrego a restricciones (0, "<=", x_i)
+
+    retornar ('ok', restricciones)
+
+fn empleadoCubreFranjaHoraria(to_i, to_j, tf_j):
+    tf_i = to_i + HORAS_TRABAJO
+
+    si tf_i < 24:
+        retornar (to_i <= to_j y tf_i >= tf_j)
+    sino:
+        to1_i = to_i
+        tf1_i = 24
+        to2_i = 0
+        tf2_i = tf_i % 24
+
+        retornar (to1_i <= to_j y tf1_i >= tf_j) o (to2_i <= to_j y tf2_i >= tf_j)
+
+//============== FUNCION OBJETIVO ==============//
+
+fn funcionObjetivo(variablesDecision):
+    segundoTermino = 0
+
+    desde i = 1 hasta tamaño(variablesDecision):
+        segundoTermino -= x_i
+
+    retornar ("maximizar", ("-z", "=", segundoTermino))
+
+//============== ALGORITMO SIMPLEX ==============//
+
+fn algoritmoSimplex(variablesDecision, restricciones, funcionObjetivo):
+    (restriccionesSlack, funcionObjetivoSlack) = representar el problema de forma Slack(restricciones, funcionObjetivo)
+    
+    seleccionar como solucionInicial a la solución básica
+    si la solucionInicial no cumple con restricciones:
+        # realizo una inicialización especial (problema auxiliar)
+        # esto me va a generar unas nuevas restricciones y una nueva funcion objetivo
+        (estado, resultadoInicializacion) = inicializacionEspecial(variablesDecision, restricciones, funcionObjetivo)
+        si estado != 'ok':
+            retorno estado
+        (solucionInicial, restriccionesSlack, funcionObjetivoSlack) = resultadoInicializacion
+    
+    mientras exista un coeficiente positivo en la funcionObjetivoSlack:
+        seleccionar una variable de salida vs entre las variables básicas con coeficiente positivo en la funcionObjetivoSlack
+        determinar la variable de entrada ve cuya restricción es la que ajusta a vs
+        
+        si la variable vs no se ajusta:
+            retornar (‘solución ilimitada’, null)
+
+        realizar el proceso de pivot entre vs y ve
+
+    retornar ('ok', (valor de las variablesDecision, restriccionesSlack, funcionObjetivo, valor de funcionObjetivoSlack))
+
+//============== INICIALIZACIÓN ESPECIAL (PROBLEMA AUXILIAR) ==============//
+
+fn inicializacionEspecial(variablesDecision, restricciones, funcionObjetivo):
+    variablesDecisionAux = [x_0, ...variablesDecision]  # Agregamos x_0
+
+    restriccionesAux = []
+    por cada restriccion de restricciones:
+        (primerTermino, signo, segundoTermino) = restriccion
+        primerTerminoAux = primerTermino
+        si restriccion es de no negatividad:
+            primerTerminoAux =- x_0  # Agregamos x_0 con coeficiente -1
+        agrego (primerTermino, signo, segundoTermino) a restriccionesAux 
+
+    funcionObjetivoAux = ("maximizar", "-x_0")
+
+    (restriccionesSlack, funcionObjetivoSlack) = representar el problema de forma Slack(restriccionesAux, funcionObjetivoAux)
+    
+    seleccionar como variable de salida vs a x_0
+    determinar la variable de entrada ve cuya restricción es la que ajusta a vs
+    si la variable vs no se ajusta:
+        retornar ‘solución ilimitada’
+
+    realizar el proceso de pivot entre vs y ve
+
+    (valorVariablesDecision, restricciones, funcionObjetivo, valorFuncionObjetivo) = algoritmoSimplex(variablesDecisionAux, restriccionesSlack, funcionObjetivoSlack)
+
+    si valorFuncionObjetivo == 0:
+        # llegamos a una solucion optima, es decir la solucion basica
+
+        quito  x_0 de las restricciones y la funcionObjetivo
+        modifico la funcionObjetivo para que no tenga las variables basicas
+        quito el valor de x_0 de valorVariablesDecision
+        retorno ('ok', (valorVariablesDecision, restricciones, funcionObjetivo))
+    sino:
+        retorno ('no hay solucion factible', null)
+
+//============== TRANSFORMACION SOLUCION ==============//
+
+fn transformoSolucion(valorVariablesDecision, valorFuncionObjetivo, horariosEntrada):
+    cantidadEmpleadosEnHorario = {}
+    
+    desde i = 0 hasta tamaño(horariosEntrada) - 1:
+        to_i = horariosEntrada[i]
+        cantidadEmpleadosEnHorario[to_i] = redondeo para arriba(valorVariablesDecision[i])
+
+    retornar cantidadEmpleadosEnHorario
