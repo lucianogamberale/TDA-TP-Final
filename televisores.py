@@ -80,6 +80,9 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
 
         modelo += lpSum(empleados_cubren_franja) >= bj, f"Restriccion_{j+1}"
 
+    # guardo el problema en un archivo .lp para dejar la información del problema
+    modelo.writeLP("Minimizacion_Empleados.lp")
+
     # resuelvo el problema usando el método Simplex
     modelo.solve()
 
