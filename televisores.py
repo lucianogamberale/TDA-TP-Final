@@ -1,5 +1,5 @@
 import sys
-from pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpStatus
+from pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpStatus, PULP_CBC_CMD
 
 HORAS_TRABAJO = 8
 
@@ -83,8 +83,18 @@ def resolverSimplex(horariosEntrada, franjasHorarias):
     # guardo el problema en un archivo .lp para dejar la información del problema
     modelo.writeLP("Minimizacion_Empleados.lp")
 
+    # configuro solver para usar Simplex con mensajes detallados
+    solver = PULP_CBC_CMD(
+        msg=True,            # muestro detalles del proceso
+        timeLimit=None,      # sin límite de tiempo
+        presolve=False,      # no usa preprocesamiento automático
+        cuts=None,           # no aplica cortes
+        strong=False,        # no usa heurísticas avanzadas
+        options=["ratio 1"]  # fuerzo la regla del mínimo cociente en Simplex
+    )
+
     # resuelvo el problema usando el método Simplex
-    modelo.solve()
+    modelo.solve(solver)
 
     return modelo
 
