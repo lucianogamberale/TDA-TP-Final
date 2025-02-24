@@ -32,7 +32,7 @@ def main():
 
 def assertParametrosEsperados():
     if len(sys.argv) < 3:
-        print("Uso: python televisores.py <horarios_entrada.csv> <franjas_horarias.csv>")
+        print("Uso: python fabrica_televisores.py <horarios_entrada.csv> <franjas_horarias.csv>")
         sys.exit(1)
 
 
